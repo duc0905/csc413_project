@@ -1,0 +1,5 @@
+*.zip
+/data/ModelNet40/
+/data/metadata_modelnet40.csv
+/data/*.png
+/data/*.jpg
