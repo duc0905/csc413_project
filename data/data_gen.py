@@ -85,7 +85,26 @@ def generate_image(
     bpy.context.scene.render.filepath = os.path.join(train_path, img_opts.filename)
     bpy.ops.render.render(write_still = True)
 
-    # TODO: Remove the object from the scene
+    # NOTE: Get the visible vertices
+    visible_verts = []
+    hidden_verts = []
+    cam_pos = bpy.data.objects["Camera"].location
+    for vert in obj.data.vertices:
+        v = obj.matrix_world @ vert.co
+        d = cam_pos - obj.matrix_world @ v
+        d.normalize()
+        _v = v + 1e-6 * d
+
+        hit, loc, normal, index, ob, mat = bpy.context.scene.ray_cast(bpy.context.view_layer, _v, d)
+        if not hit: # Can be seen by the camera
+            visible_verts.append(v)
+        else:
+            hidden_verts.append(v)
+
+    # TODO: Save visible_verts and hidden_verts somewhere (in a file)
+    # print(hidden_verts)
+
+    # NOTE: Remove the object from the scene
     bpy.ops.object.select_all(action='DESELECT')
     obj.select_set(True)
     bpy.ops.object.delete()
@@ -98,11 +117,11 @@ def main():
     for ob in bpy.context.scene.objects: ob.hide_render = ob.hide_get()
 
     metadata = pd.read_csv("metadata_modelnet40.csv")
-    # NOTE: Just for testing, rendering the first 10 models instead of 1 thousand
+
     chairs = metadata[(metadata["class"] == "chair")]
 
+    # NOTE: Just for testing, rendering the first 10 models instead of 1 thousand
     for index, model in chairs[chairs["split"] == "train"].head(5).iterrows():
-        print(index, str(model["object_path"]))
         generate_image(str(model["object_path"]),
                        CameraOptions(pos=(-3.06, -13.9174, 5.47669)),
                        ImageOptions(512, 512,
