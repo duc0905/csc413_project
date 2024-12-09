@@ -3,6 +3,8 @@ import os
 import pandas as pd
 from pathlib import Path
 from typing import Tuple
+import pickle
+import numpy as np
 
 # Links
 # https://docs.blender.org/manual/en/2.83/advanced/command_line/arguments.html
@@ -114,12 +116,23 @@ def generate_image(
 
         hit, loc, normal, index, ob, mat = bpy.context.scene.ray_cast(bpy.context.view_layer, _v, d)
         if not hit: # Can be seen by the camera
-            visible_verts.append(v)
+            visible_verts.append([v[0],v[1],v[2]])
         else:
-            hidden_verts.append(v)
+            hidden_verts.append([v[0],v[1],v[2]])
 
     # TODO: Save visible_verts and hidden_verts somewhere (in a file)
-    # print(hidden_verts)
+    hidden_verts = np.array(hidden_verts)
+    visible_verts = np.array(visible_verts)
+    
+    hidden_verts_path = os.path.join(train_path, img_opts.filename + "_hidden")
+    visible_verts_path = os.path.join(train_path, img_opts.filename + "_visible")
+    with open(hidden_verts_path, 'wb') as f:
+        pickle.dump(hidden_verts, f)
+    with open(visible_verts_path, 'wb') as f:
+        pickle.dump(visible_verts, f)
+    # with open(visible_verts_path, 'rb') as f:
+    #     load = pickle.load(f)
+    #     print(load)
 
     # NOTE: Remove the object from the scene
     bpy.ops.object.select_all(action='DESELECT')
