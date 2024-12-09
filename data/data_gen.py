@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Tuple
 import pickle
 import numpy as np
+import math
 
 # Links
 # https://docs.blender.org/manual/en/2.83/advanced/command_line/arguments.html
@@ -56,15 +57,16 @@ def move_camera(options: CameraOptions):
     f = options.f
     camera = bpy.data.objects["Camera"]
     camera.location = options.pos
-    rot_z = math.atan(ox/oy)
-    if ox < 0 and rot_z < 0:
-        rot_z += math.pi
-    elif ox > 0 and rot_z > 0:
-        rot_z -= math.pi
-    rot_x = math.atan(math.sqrt(ox ** 2 + oy ** 2)/oz)
+    rot_z = math.atan(oy/ox)
+    #if ox > 0 and rot_z < 0:
+    #    rot_z += math.pi
+    #elif ox < 0 and rot_z > 0:
+    #    rot_z -= math.pi
+    rot_x = math.atan(-math.sqrt(ox ** 2 + oy ** 2)/oz)
     if (rot_x < 0):
         rot_x += math.pi
-    camera.rotation_euler = (math.degrees(rot_x), 0, math.degrees(rot_z))
+    camera.rotation_euler = (rot_x, 0, rot_z - math.pi/2)
+    print(camera.rotation_euler)
 
 def generate_image(
         modelfile: str,
@@ -100,6 +102,8 @@ def generate_image(
 
     for i in range(3):
         obj.scale[i] /= s
+
+    move_camera(camera_opts)
 
     # Set the output file name
     bpy.context.scene.render.filepath = os.path.join(train_path, img_opts.filename + "/img.png")
@@ -157,7 +161,7 @@ def main():
     # NOTE: Just for testing, rendering the first 10 models instead of 1 thousand
     for index, model in chairs[chairs["split"] == "train"].head(5).iterrows():
         generate_image(str(model["object_path"]),
-                       CameraOptions(pos=(-3.06, -13.9174, 5.47669)),
+                       CameraOptions(pos=(-3.06, -13.9174, 5.47669), look_at=(0,0,1)),
                        ImageOptions(512, 512,
                                     os.path.join(train_path, Path(str(model["object_path"])).stem)))
     # for model in chairs[chairs["split"] == "test"].head(5):
