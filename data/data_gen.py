@@ -54,14 +54,14 @@ def move_camera(options: CameraOptions):
     camera = bpy.data.objects["Camera"]
     camera.location = options.pos
     rot_z = math.atan(ox/oy)
-    if (ox < 0 && rot_z < 0):
+    if ox < 0 and rot_z < 0:
         rot_z += math.pi
-    else if (ox > 0 && rot_z > 0):
+    elif ox > 0 and rot_z > 0:
         rot_z -= math.pi
     rot_x = math.atan(math.sqrt(ox ** 2 + oy ** 2)/oz)
     if (rot_x < 0):
         rot_x += math.pi
-    camera.rotation_euler = (rot_x, 0, rot_z)
+    camera.rotation_euler = (math.degrees(rot_x), 0, math.degrees(rot_z))
 
 def generate_image(
         modelfile: str,
@@ -132,7 +132,9 @@ def main():
 
     # Hide the hidden object
     for ob in bpy.context.scene.objects: ob.hide_render = ob.hide_get()
-
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.scene.objects['Cube'].select_set(True)
+    bpy.ops.object.delete()
     metadata = pd.read_csv("metadata_modelnet40.csv")
 
     chairs = metadata[(metadata["class"] == "chair")]
