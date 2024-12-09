@@ -16,6 +16,7 @@ import numpy as np
 dir_path = os.path.dirname(os.path.realpath(__file__))
 dataset_path = os.path.join(dir_path, "ModelNet40")
 train_path = os.path.join(dir_path, "train")
+
 test_path = os.path.join(dir_path, "test")
 
 class CameraOptions:
@@ -101,7 +102,7 @@ def generate_image(
         obj.scale[i] /= s
 
     # Set the output file name
-    bpy.context.scene.render.filepath = os.path.join(train_path, img_opts.filename)
+    bpy.context.scene.render.filepath = os.path.join(train_path, img_opts.filename + "/img.png")
     bpy.ops.render.render(write_still = True)
 
     # NOTE: Get the visible vertices
@@ -124,8 +125,9 @@ def generate_image(
     hidden_verts = np.array(hidden_verts)
     visible_verts = np.array(visible_verts)
     
-    hidden_verts_path = os.path.join(train_path, img_opts.filename + "_hidden")
-    visible_verts_path = os.path.join(train_path, img_opts.filename + "_visible")
+    hidden_verts_path = os.path.join(train_path, img_opts.filename + "/hidden")
+    visible_verts_path = os.path.join(train_path, img_opts.filename + "/visible")
+    print(hidden_verts_path)
     with open(hidden_verts_path, 'wb') as f:
         pickle.dump(hidden_verts, f)
     with open(visible_verts_path, 'wb') as f:
@@ -157,7 +159,7 @@ def main():
         generate_image(str(model["object_path"]),
                        CameraOptions(pos=(-3.06, -13.9174, 5.47669)),
                        ImageOptions(512, 512,
-                                    os.path.join(train_path, Path(str(model["object_path"])).stem + ".png")))
+                                    os.path.join(train_path, Path(str(model["object_path"])).stem)))
     # for model in chairs[chairs["split"] == "test"].head(5):
         # generate_image(model.object_path,
         #                CameraOptions(pos=(-3.06, -13.9174, 5.47669)),
