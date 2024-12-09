@@ -46,6 +46,23 @@ class ImageOptions:
         self.size_y = size_y
         self.filename = filepath
 
+def move_camera(options: CameraOptions):
+    cx, cy, cz = options.pos
+    tx, ty, tz = options.look_at
+    ox, oy, oz = tx-cx, ty-cy, tz-cz
+    f = options.f
+    camera = bpy.data.objects["Camera"]
+    camera.location = options.pos
+    rot_z = math.atan(ox/oy)
+    if (ox < 0 && rot_z < 0):
+        rot_z += math.pi
+    else if (ox > 0 && rot_z > 0):
+        rot_z -= math.pi
+    rot_x = math.atan(math.sqrt(ox ** 2 + oy ** 2)/oz)
+    if (rot_x < 0):
+        rot_x += math.pi
+    camera.rotation_euler = (rot_x, 0, rot_z)
+
 def generate_image(
         modelfile: str,
         # object_opts: ObjectOptions,

@@ -1,6 +1,7 @@
 import bpy
 import os
 from typing import Tuple
+import math
 
 # Links
 # https://docs.blender.org/manual/en/2.83/advanced/command_line/arguments.html
@@ -51,6 +52,21 @@ def generate_image(
     pass
 
 
+def create_light_source(
+        x: int,
+        y: int,
+        z: int,
+        energy: int):
+    # https://stackoverflow.com/questions/17355617/can-you-add-a-light-source-in-blender-using-python
+    light_data = bpy.data.lights.new(name="light", type='POINT')
+    light_data.energy = energy
+    light_object = bpy.data.objects.new(name="light", object_data=light_data)
+    light_object.location = (x, y, z)
+
+    bpy.context.collection.objects.link(light_object)
+    bpy.context.view_layer.objects.active = light_object
+    pass
+
 def make_scene(modelfile: str):
     """
     Make the scene empty with:
@@ -68,6 +84,9 @@ def make_scene(modelfile: str):
         filepath = os.path.join(dataset_path, modelfile)
         # filepath = "./ModelNet40/chair/test/chair_0890.off"
         print("Import: ", bpy.ops.import_mesh.off(filepath=filepath))
+        create_light_source(0, 0, 3)
+        print("Create_light_source")
+        
     except Exception as e:
         print("Fk", e)
     pass
