@@ -10,6 +10,8 @@ import math
 # Links
 # https://docs.blender.org/manual/en/2.83/advanced/command_line/arguments.html
 # blender.exe .\test.blend -b -P .\data_gen.py --addons import_off
+# https://blenderartists.org/t/raytracing-to-obtain-vertices-visible-to-camera/1362124
+# https://pandas.pydata.org/docs/user_guide/10min.html#basic-data-structures-in-pandas
 # https://blender.stackexchange.com/questions/318254/does-blender-have-a-built-in-basic-material-library
 # https://docs.blender.org/manual/en/2.83/addons/materials/material_library.html
 # https://docs.blender.org/api/current/bpy.ops.mesh.html - look for primtive_...
@@ -107,6 +109,8 @@ def generate_image(
 
     # Set the output file name
     bpy.context.scene.render.filepath = os.path.join(train_path, img_opts.filename + "/img.png")
+    bpy.context.scene.render.resolution_x = img_opts.size_x
+    bpy.context.scene.render.resolution_y = img_opts.size_y
     bpy.ops.render.render(write_still = True)
 
     # NOTE: Get the visible vertices
@@ -115,7 +119,7 @@ def generate_image(
     cam_pos = bpy.data.objects["Camera"].location
     for vert in obj.data.vertices:
         v = obj.matrix_world @ vert.co
-        d = cam_pos - obj.matrix_world @ v
+        d = cam_pos - v
         d.normalize()
         _v = v + 1e-6 * d
 
@@ -162,13 +166,12 @@ def main():
     for index, model in chairs[chairs["split"] == "train"].head(5).iterrows():
         generate_image(str(model["object_path"]),
                        CameraOptions(pos=(-3.06, -13.9174, 5.47669), look_at=(0,0,1)),
-                       ImageOptions(512, 512,
-                                    os.path.join(train_path, Path(str(model["object_path"])).stem)))
+                       ImageOptions(128, 128, os.path.join(train_path, Path(str(model["object_path"])).stem)))
     # for model in chairs[chairs["split"] == "test"].head(5):
-        # generate_image(model.object_path,
-        #                CameraOptions(pos=(-3.06, -13.9174, 5.47669)),
-        #                ImageOptions(512, 512,
-        #                             os.path.join(test_path, Path(model.object_path).stem + ".png")))
+    #     generate_image(model.object_path,
+    #                    CameraOptions(pos=(-3.06, -13.9174, 5.47669)),
+    #                    ImageOptions(512, 512,
+    #                                 os.path.join(test_path, Path(model.object_path).stem + ".png")))
 
 
 main()
