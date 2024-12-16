@@ -6,6 +6,7 @@ from typing import Tuple
 import pickle
 import numpy as np
 import math
+from mathutils import Vector
 
 # Links
 # https://docs.blender.org/manual/en/2.83/advanced/command_line/arguments.html
@@ -19,8 +20,10 @@ import math
 dir_path = os.path.dirname(os.path.realpath(__file__))
 dataset_path = os.path.join(dir_path, "ModelNet40")
 train_path = os.path.join(dir_path, "train")
-
 test_path = os.path.join(dir_path, "test")
+
+vis_cnt = 0
+hid_cnt = 0
 
 class CameraOptions:
     # Camera position
@@ -53,22 +56,26 @@ class ImageOptions:
         self.filename = filepath
 
 def move_camera(options: CameraOptions):
-    cx, cy, cz = options.pos
-    tx, ty, tz = options.look_at
-    ox, oy, oz = tx-cx, ty-cy, tz-cz
+    p = Vector(options.pos)
+    point = Vector(options.look_at)
+    direction = point - p
     f = options.f
     camera = bpy.data.objects["Camera"]
     camera.location = options.pos
-    rot_z = math.atan(oy/ox)
+    rot_quat = direction.to_track_quat('-Z', 'Y')
+
+    # rot_z = math.atan(oy/ox)
     #if ox > 0 and rot_z < 0:
     #    rot_z += math.pi
     #elif ox < 0 and rot_z > 0:
     #    rot_z -= math.pi
-    rot_x = math.atan(-math.sqrt(ox ** 2 + oy ** 2)/oz)
-    if (rot_x < 0):
-        rot_x += math.pi
-    camera.rotation_euler = (rot_x, 0, rot_z - math.pi/2)
+    # rot_x = math.atan(-math.sqrt(ox ** 2 + oy ** 2)/oz)
+    # if (rot_x < 0):
+    #     rot_x += math.pi
+    # camera.rotation_euler = (rot_x, 0, rot_z - math.pi/2)
+    camera.rotation_euler = rot_quat.to_euler()
     print(camera.rotation_euler)
+
 
 def generate_image(
         modelfile: str,
@@ -81,8 +88,11 @@ def generate_image(
     bpy.ops.import_mesh.off(filepath=objectfile)
 
     # Get the imported object
-    obj_name = Path(objectfile).stem
-    obj = bpy.context.scene.objects[obj_name]
+    obj_name = Path(modelfile).stem
+    print(modelfile)
+    print(obj_name)
+    print(bpy.context.scene.objects.keys())
+    obj = bpy.context.scene.objects[0]
 
     # Scale the thing
     m = [1000000, 1000000, 1000000]
@@ -129,10 +139,11 @@ def generate_image(
         else:
             hidden_verts.append([v[0],v[1],v[2]])
 
-    # TODO: Save visible_verts and hidden_verts somewhere (in a file)
+    vis = len(visible_verts)
+    hid = len(hidden_verts)
     hidden_verts = np.array(hidden_verts)
     visible_verts = np.array(visible_verts)
-    
+
     hidden_verts_path = os.path.join(train_path, img_opts.filename + "/hidden")
     visible_verts_path = os.path.join(train_path, img_opts.filename + "/visible")
     print(hidden_verts_path)
@@ -149,6 +160,8 @@ def generate_image(
     obj.select_set(True)
     bpy.ops.object.delete()
 
+    return vis, hid
+
 
 def main():
     # setup_tools()
@@ -160,18 +173,33 @@ def main():
     bpy.ops.object.delete()
     metadata = pd.read_csv("metadata_modelnet40.csv")
 
-    chairs = metadata[(metadata["class"] == "chair")]
+    cups = metadata[(metadata["class"] == "cup")]
+    viss = []
+    hids = []
 
-    # NOTE: Just for testing, rendering the first 10 models instead of 1 thousand
-    for index, model in chairs[chairs["split"] == "train"].head(5).iterrows():
-        generate_image(str(model["object_path"]),
-                       CameraOptions(pos=(-3.06, -13.9174, 5.47669), look_at=(0,0,1)),
-                       ImageOptions(128, 128, os.path.join(train_path, Path(str(model["object_path"])).stem)))
-    # for model in chairs[chairs["split"] == "test"].head(5):
-    #     generate_image(model.object_path,
-    #                    CameraOptions(pos=(-3.06, -13.9174, 5.47669)),
-    #                    ImageOptions(512, 512,
-    #                                 os.path.join(test_path, Path(model.object_path).stem + ".png")))
+    cam_opts = [
+        CameraOptions(pos=(-3.0, -14.0, 5.0), look_at=(0,0,1)),
+        CameraOptions(pos=(3.0, -13.0, 4.0), look_at=(0,0,1)),
+        CameraOptions(pos=(-7.0, -8.0, 2.5), look_at=(0,0,1)),
+        CameraOptions(pos=(7.0, -8.0, 10.8), look_at=(0,0,1)),
+    ]
+
+    for _, model in cups[cups["split"] == "train"].iterrows():
+        for i, cam_opt in enumerate(cam_opts):
+            vis, hid = generate_image(str(model["object_path"]),
+                           cam_opt,
+                           ImageOptions(128, 128, os.path.join(train_path, Path(str(model["object_path"])).stem + str(i))))
+            viss.append(vis)
+            hids.append(hid)
+
+    for _, model in cups[cups["split"] == "test"].iterrows():
+        for i, cam_opt in enumerate(cam_opts):
+            vis, hid = generate_image(str(model["object_path"]),
+                           cam_opt,
+                           ImageOptions(128, 128, os.path.join(test_path, Path(str(model["object_path"])).stem + str(i))))
+
+    print(viss)
+    print("Mean, var: ", np.mean(np.array(viss)), np.var(np.array(viss)))
 
 
 main()
